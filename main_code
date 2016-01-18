@@ -1,0 +1,631 @@
+#include<reg51.h>
+
+sbitadc_rd=P3^2; //ADC CONTTROL PIN
+
+sbitadc_wr=P3^3; //ADC CONTTROL PIN
+
+sbitadc_int=P3^4; //ADC CONTTROL PIN
+
+sbit buzz=P3^5;// BUZZER
+
+sbitmotorp=P2^6; //MOTOR CONTROL INS
+
+//sbitmotorn=P2^1;
+
+sbit relay =P2^2;
+
+sbitir_light=P2^3; //IR1 FOR LOAD CONTROLNG
+
+sbitir_buzz=P2^4;  //IR1 FOR SECURIY
+
+sbitlevel_sens =P2^5; //WATER LEVEL SENSOR
+
+sbit led=P0^0;
+
+sbitrs=P0^1;  
+
+sbitrw=P0^2;  
+
+sbit e =P0^3;  
+
+sbit d4=P0^4;  
+
+sbit d5=P0^5;  
+
+sbit d6=P0^6;   
+
+sbit d7=P0^7;     
+
+sbit c0=B^0;  
+
+sbit c1=B^1;  
+
+sbit c2=B^2;   
+
+sbit c3=B^3;  
+
+sbit c4=B^4;  
+
+sbit c5=B^5;  
+
+sbit c6=B^6;   
+
+sbit c7=B^7;
+
+voidadc_conv();
+
+void delay(unsigned char);
+
+voidadc();
+
+voidlcdinit();
+
+voidlcddisp(unsigned char *s,unsigned char);
+
+voidlcdcmd(unsigned char);
+
+voidlcddata(unsigned char);
+
+voidlcdconv(unsigned char);
+
+voidser_isr();
+
+void process();
+
+voiduart();
+
+voidtx_data(unsigned char ch);
+
+unsigned char temp,ch,total,i,v,w,x,y,j,k,l1,l,i1,i3,ch1;
+
+unsigned char tank[]="TANK IS FULL         \r";
+
+unsigned char tank1[]="MOTOR ON TANK FILING\r";
+
+unsigned char tank2[]="MOTOR OFF           \r";
+
+void main()
+
+ { 
+
+motorp=0; 
+
+ SCON=0x50; 
+
+ TMOD=0x20; 
+
+ TH1=-3; 
+
+ TR1=1; 
+
+ /*sensors & motor i/o configuration*/
+
+ir_light=ir_buzz=level_sens=1;
+
+buzz=relay=1;
+
+motorp=1;
+
+ //P0=0x00;
+
+lcdinit(); 
+
+lcdcmd(0x80);
+
+delay(50);
+
+lcddisp("WELCOME TO REAL",15);
+
+lcdcmd(0xc0);
+
+delay(50);
+
+lcddisp("TIME SENSING SYS",16);
+
+lcdcmd(0x80);
+
+for(i3=0;i3<250;i3++)
+
+{
+
+delay(200);
+
+delay(200);
+
+delay(200);
+
+delay(200); 
+
+delay(200);
+
+delay(50);
+
+ }
+
+lcdcmd(0x01);
+
+delay(50);
+
+lcdcmd(0x80);
+
+delay(50);
+
+lcddisp("TEMPERATURE: ",13);
+
+adc();
+
+//lcddisp("TEMPERATURE: ",13);
+
+//
+
+tx_data('0'); 
+
+tx_data('0');
+
+tx_data('0');
+
+tx_data('0');
+
+tx_data('0');
+
+tx_data('0');
+
+tx_data('0');
+
+tx_data('0');
+
+tx_data('\n');
+
+while(1)
+
+{   
+
+   EA=1; 
+
+ ES=1; 
+
+// lcdconv(itm);
+
+if(ch=='O')
+
+{ 
+
+adc();
+
+motorp=0;
+
+delay(200);
+
+delay(200);
+
+lcdcmd(0xc0);
+
+delay(5);
+
+lcddisp("MTR ON TNK FILNG",16);
+
+EA=0;
+
+for(i1=0;i1<21;i1++)
+
+{
+
+ch=tank1[i1];
+
+tx_data(ch);
+
+}
+
+EA=1; 
+
+}
+
+if(ch=='F')
+
+{ adc();
+
+motorp=1;
+
+delay(200);
+
+delay(200);
+
+lcdcmd(0xc0);
+
+delay(5);
+
+lcddisp("MTR OFF         ",16);
+
+EA=0;
+
+for(i1=0;i1<21;i1++)
+
+{
+
+ch=tank2[i1];
+
+tx_data(ch);
+
+}
+
+EA=1;
+
+}
+
+if(level_sens ==0)
+
+{ EA=0;
+
+adc();
+
+motorp=1;
+
+//lcdcmd(0x01);
+
+delay(50);
+
+lcdcmd(0xc0);
+
+delay(50);
+
+lcddisp("TANK IS FULL    ",16);
+
+EA=0;
+
+for(i1=0;i1<22;i1++)
+
+{
+
+ch=tank[i1];
+
+tx_data(ch);
+
+}
+
+EA=1;
+
+}
+
+if(level_sens ==1)
+
+{ //EA=0;
+
+adc();
+
+//motorp=0;
+
+//lcdcmd(0x01);
+
+//delay(50);
+
+//lcdcmd(0xc0);
+
+delay(50);
+
+//lcddisp("WATER PROCESSING",16);
+
+//EA=0;
+
+/*for(i1=0;i1<22;i1++)
+
+{
+
+ch=tank[i1];
+
+tx_data(ch);
+
+}*/
+
+EA=1;
+
+}
+
+if(ir_light==0)
+
+{
+
+adc();
+
+}
+
+relay=0;
+
+if(ir_light==1) 
+
+relay=1;
+
+if(ir_buzz==0)
+
+buzz=0;
+
+if(ir_buzz==1)
+
+{
+
+buzz=1; 
+
+adc();
+
+}
+
+}
+
+}
+
+voidlcdinit()
+
+{
+
+led=0;
+
+delay(50);
+
+lcdcmd(0x03);
+
+delay(50);
+
+lcdcmd(0x03);
+
+delay(50);
+
+lcdcmd(0x02);
+
+delay(50);
+
+lcdcmd(0x28);
+
+delay(50);
+
+lcdcmd(0x06);
+
+delay(50);
+
+lcdcmd(0x10);
+
+delay(50);
+
+lcdcmd(0x0f);
+
+delay(50);
+
+lcdcmd(0x01);
+
+delay(50);
+
+}
+
+voidlcdcmd(unsigned char com)
+
+{
+
+rs=0;  
+
+rw=0; 
+
+B=com; 
+
+d4=c4;
+
+d5=c5;
+
+d6=c6;
+
+d7=c7;
+
+e=1;
+
+delay(5);  
+
+e=0;
+
+d4=c0;
+
+d5=c1;
+
+d6=c2;
+
+d7=c3;
+
+e=1;
+
+delay(5);
+
+e=0;
+
+}
+
+voidlcddata(unsigned char dat)
+
+{
+
+rs=1;   
+
+rw=0; 
+
+B=dat; 
+
+d4=c4;
+
+d5=c5;
+
+d6=c6;
+
+d7=c7;
+
+e=1;
+
+delay(5);  
+
+e=0;
+
+d4=c0;
+
+d5=c1;
+
+d6=c2;
+
+d7=c3;
+
+e=1;
+
+delay(5);
+
+e=0;
+
+delay(200);
+
+delay(200);
+
+}
+
+void delay(unsigned char del)
+
+{
+
+unsigned char m,n;
+
+for(m=0;m<del;m++);
+
+for(n=0;n<255;n++);
+
+}
+
+voidlcdconv(unsigned char temp)
+
+{
+
+ /*i=temp/10;
+
+ j=temp%10;
+
+i=i|0x30;
+
+ j=j|0x30;
+
+lcdcmd(0x8c);
+
+delay(50);
+
+lcddata(i);
+
+delay(10);
+
+lcddata(j);
+
+delay(10); 
+
+ */
+
+ v=temp/100; 
+
+w=temp%100;
+
+x=w/10;
+
+y=w%10;
+
+v=v|0x30;
+
+x=x|0x30;
+
+y=y|0x30;
+
+lcdcmd(0x8c);
+
+delay(150);
+
+lcddata(v);
+
+delay(50);
+
+lcddata(x);
+
+delay(50);
+
+lcddata(y);
+
+delay(50);
+
+lcddata(223);
+
+/*delay(150);
+
+lcddata('C');
+
+delay(150);*/
+
+} 
+
+voidlcddisp(unsigned char *s, unsigned char w)
+
+{
+
+for(k=0;k<w;k++)
+
+{
+
+lcddata(s[k]);
+
+delay(50);
+
+}
+
+}
+
+voidadc()
+
+ {
+
+unsigned char itm;
+
+adc_int=1;
+
+adc_rd=1;
+
+adc_wr=1;
+
+for(l=0;l<2;l++)
+
+ {
+
+adc_wr=0;
+
+adc_wr=1;
+
+//while(adc_int==1);
+
+adc_rd=0;
+
+itm=P1;
+
+lcdconv(itm);
+
+ } }
+
+voidtx_data(unsigned char ch)
+
+{
+
+SBUF=ch;
+
+while(TI==0);
+
+TI=0;
+
+}
+
+voidser_isr() interrupt 4 
+
+ { 
+
+while(RI==0); 
+
+  //EA=0; 
+
+ch=SBUF; 
+
+  RI=0; 
+
+  //} 
+
+ }
